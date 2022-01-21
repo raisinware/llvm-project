@@ -756,7 +756,8 @@ ExprResult Sema::CallExprUnaryConversions(Expr *E) {
   // to function type.
   if (Ty->isFunctionType()) {
     Res = ImpCastExprToType(E, Context.getPointerType(Ty),
-                            CK_FunctionToPointerDecay);
+                            CK_FunctionToPointerDecay, VK_PRValue, nullptr,
+                            CCK_ImplicitConversion, true);
     if (Res.isInvalid())
       return ExprError();
   }
@@ -2078,10 +2079,24 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
 /// declaration that does not require a closure capture.
 DeclRefExpr *
 Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
-                       const DeclarationNameInfo &NameInfo,
+                       const DeclarationNameInfo &OldNameInfo,
                        NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
                        const TemplateArgumentListInfo *TemplateArgs) {
+  // Strip any Transparent Aliases at this point
+  Optional<DeclarationNameInfo> MaybeRealDNI = None;
+  /*if (TransparentAliasAttr *TAAttr = D->getAttr<TransparentAliasAttr>()) {
+    NamedDecl *RealNamedDecl = TAAttr->getTargetDecl();
+    ValueDecl *RealVD = dyn_cast<ValueDecl>(RealNamedDecl);
+    if (RealVD) {
+      D = RealVD;
+    }
+    FoundD = RealNamedDecl;
+    MaybeRealDNI.emplace(RealNamedDecl->getDeclName(), TAAttr->getLocation());
+  }*/
+  const DeclarationNameInfo & NameInfo = MaybeRealDNI ? *MaybeRealDNI : OldNameInfo;
+
+
   bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
                                   NeedToCaptureVariable(D, NameInfo.getLoc());
 
@@ -15830,6 +15845,27 @@ static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
   return Ctx.getIntWidth(T) >= Ctx.getIntWidth(Ctx.IntTy);
 }
 
+static void addressOfTransparentAlias(Sema& S, ExprResult& Result, Expr* E) {
+  DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts());
+  if (DRE == nullptr) {
+    return;
+  }
+  ValueDecl *VDPrimary = DRE->getDecl();
+  if (VDPrimary == nullptr) {
+    return;
+  }
+  TransparentAliasAttr *TAAttr = VDPrimary->getAttr<TransparentAliasAttr>();
+  if (TAAttr == nullptr) {
+    return;
+  }
+  ValueDecl *VDTarget = dyn_cast<ValueDecl>(TAAttr->getTargetDecl());
+  if (VDTarget == nullptr) {
+    return;
+  }
+  DRE->setDecl(VDTarget);
+  Result = DRE;
+}
+
 ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                       UnaryOperatorKind Opc, Expr *InputExpr,
                                       bool IsAfterAmp) {
@@ -15876,6 +15912,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     break;
   case UO_AddrOf:
     resultType = CheckAddressOfOperand(Input, OpLoc);
+    addressOfTransparentAlias(*this, Input, InputExpr);
     CheckAddressOfNoDeref(InputExpr);
     RecordModifiableNonNullParam(*this, InputExpr);
     break;
