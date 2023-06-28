@@ -3867,7 +3867,7 @@ void Parser::ParseDeclarationSpecifiers(
       isStorageClass = true;
       break;
     case tok::kw_auto:
-      if (getLangOpts().CPlusPlus11) {
+      if (getLangOpts().CPlusPlus11 || getLangOpts().C2x) {
         if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
