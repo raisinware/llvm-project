@@ -1199,7 +1199,14 @@ conformance.</p>
     <tr>
       <td>Type inference for object declarations</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3007.htm">N3007</a></td>
-      <td class="unreleased" align="center">Clang 17</td>
+      <td class="partial" align="center">
+        <details><summary>Partial (celeste-16 branch)</summary>
+          <ul>
+            <li>Wrong diagnostic when using the _Atomic attribute</li>
+            <li>Misleading diagnostic where it should say that auto is not allowed but says that [...] requires an initializer.</li>
+          </ul>
+        </details>
+      </td>
     </tr>
     <tr>
       <td>constexpr for object definitions</td>
