@@ -1103,7 +1103,7 @@ def Common : InheritableAttr {
 }
 
 def Const : InheritableAttr {
-  let Spellings = [GCC<"const">, GCC<"__const">];
+  let Spellings = [GCC<"const">, GCC<"__const">, C2x<"", "unsequenced", 202311>];
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
 }
@@ -2390,7 +2390,7 @@ def AArch64SVEPcs: DeclOrTypeAttr {
 }
 
 def Pure : InheritableAttr {
-  let Spellings = [GCC<"pure">];
+  let Spellings = [GCC<"pure">, C2x<"", "reproducible", 202311>];
   let Documentation = [Undocumented];
   let SimpleHandler = 1;
 }
