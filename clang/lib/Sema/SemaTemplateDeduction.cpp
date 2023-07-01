@@ -4727,24 +4727,9 @@ Sema::TemplateDeductionResult Sema::DeduceAutoType(TypeLoc Type, Expr *Init,
     return TDK_Success;
   }
 
-  // Make sure that we treat 'char[]' equaly as 'char*' in C2x mode
-  auto *String = dyn_cast<StringLiteral>(Init);
-  if (getLangOpts().C2x && String && Type.getType()->isArrayType()) {
-    TypeLoc TL = TypeLoc(Init->getType(), Type.getOpaqueData());
-    Result = SubstituteDeducedTypeTransform(*this, DependentResult).Apply(TL);
-    assert(!Result.isNull() && "substituting DependentTy can't fail");
-    return TDK_Success;
-  }
-
-  // Emit a warning if 'auto*' is used in pedantic and in C2x mode
-  if (getLangOpts().C2x && Type.getType()->isPointerType()) {
-    Diag(Type.getBeginLoc(), diag::ext_c2x_auto_pointer_declaration);
-  }
-
   auto *InitList = dyn_cast<InitListExpr>(Init);
   if (!getLangOpts().CPlusPlus && InitList) {
-    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c)
-        << (AT->isGNUAutoType() ? "__auto_type" : "auto");
+    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c);
     return TDK_AlreadyDiagnosed;
   }
 
